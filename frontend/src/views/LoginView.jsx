@@ -27,6 +27,13 @@ export default function LoginView({ goTo }) {
 
   const handleFirebaseLogin = async (e) => {
     e.preventDefault()
+    
+    // Guard: Firebase not configured
+    if (!auth) {
+      setError('Firebase is not configured. Check environment variables.')
+      return
+    }
+    
     setLoading(true)
     setError('')
     

@@ -22,6 +22,14 @@ function SignupView({ goTo }) {
 
   const handleSignup = async (e) => {
     e.preventDefault()
+    
+    // Guard: Firebase not configured
+    if (!auth) {
+      setError('Firebase is not configured. Check environment variables.')
+      setLoading(false)
+      return
+    }
+    
     setError('')
     setLoading(true)
 
