@@ -22,24 +22,25 @@ const requiredKeys = [
 ]
 
 const missing = requiredKeys.filter((key) => !import.meta.env[key])
-let app, auth, db
 
-if (missing.length) {
+// Initialize conditionally
+let app = null
+let auth = null
+let db = null
+
+if (!missing.length) {
+  // Initialize Firebase
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  db = getFirestore(app)
+} else {
   // Firebase not configured; app will show a setup message
   console.warn(
     `Missing Firebase env vars: ${missing.join(', ')}. ` +
       'Create a .env.local (dev) or set in Vercel/Render dashboard (production) with VITE_FIREBASE_* values.'
   )
-  // Export dummy objects to prevent crashes
-  export const auth = null
-  export const db = null
-  export default null
-} else {
-  // Initialize Firebase
-  app = initializeApp(firebaseConfig)
-  auth = getAuth(app)
-  db = getFirestore(app)
-  
-  export { auth, db }
-  export default app
 }
+
+export { auth, db }
+export default app
+
