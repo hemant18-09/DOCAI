@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../config/firebase'
+import API_BASE from '../config/api'
 
 export default function LoginView({ goTo }) {
   const [email, setEmail] = useState('')
@@ -44,7 +45,7 @@ export default function LoginView({ goTo }) {
       const idToken = await userCredential.user.getIdToken()
       
       // Send token to backend
-      const response = await fetch('http://localhost:5000/api/auth/login/firebase', {
+      const response = await fetch(`${API_BASE}/auth/login/firebase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

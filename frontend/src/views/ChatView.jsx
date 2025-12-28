@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import API_BASE from '../config/api'
 import './ChatView.css'
 
 function ChatView({ goTo }) {
@@ -55,7 +56,7 @@ function ChatView({ goTo }) {
 
   const fetchDoctors = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/doctors')
+      const response = await fetch(`${API_BASE}/auth/doctors`)
       const data = await response.json()
       if (data.success) {
         setDoctors(data.doctors)
@@ -75,7 +76,7 @@ function ChatView({ goTo }) {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/messages/conversation?patientId=${user.id}&doctorId=${selectedDoctor.id}`
+        `${API_BASE}/messages/conversation?patientId=${user.id}&doctorId=${selectedDoctor.id}`
       )
       const data = await response.json()
       if (data.success) {
@@ -91,7 +92,7 @@ function ChatView({ goTo }) {
 
   const sendMessage = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/messages/send', {
+      const response = await fetch(`${API_BASE}/messages/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

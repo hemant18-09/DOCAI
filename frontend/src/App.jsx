@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { auth } from './config/firebase'
+import API_BASE from './config/api'
 import { MessageProvider } from './context/MessageContext'
 import './App.css'
 import LoginView from './views/LoginView.jsx'
@@ -58,6 +59,11 @@ function App() {
 
   // Bootstrap login state from Firebase session or localStorage
   useEffect(() => {
+    if (!auth) {
+      console.warn('[App Bootstrap] Firebase not configured; skipping auth listener')
+      return
+    }
+
     console.log('[App Bootstrap] Checking auth state...')
     const existing = localStorage.getItem('user')
     if (existing) {
@@ -75,7 +81,7 @@ function App() {
           console.log('[App Bootstrap] Getting ID token...')
           const idToken = await user.getIdToken()
           console.log('[App Bootstrap] Calling backend /api/auth/login/firebase')
-          const response = await fetch('http://localhost:5000/api/auth/login/firebase', {
+          const response = await fetch(`${API_BASE}/auth/login/firebase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken })

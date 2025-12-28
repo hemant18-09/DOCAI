@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../config/firebase'
+import API_BASE from '../config/api'
 
 function SignupView({ goTo }) {
   const [userType, setUserType] = useState('patient')
@@ -80,7 +81,7 @@ function SignupView({ goTo }) {
       }
 
       // Save user to backend/Firestore
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      const response = await fetch(`${API_BASE}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
