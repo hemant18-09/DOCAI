@@ -20,7 +20,7 @@ const LANGUAGE_LABELS = {
   ml: "Malayalam",
 };
 
-function HomeView({ goTo }) {
+function PatientPortalView({ goTo }) {
   const [textInput, setTextInput] = useState('')
   const [selectedLang, setSelectedLang] = useState('en')
   const { listening, text, startListening, stopListening, setText } = useSpeechToText(LANGUAGE_MAP[selectedLang])
@@ -215,4 +215,4 @@ function HomeView({ goTo }) {
   )
 }
 
-export default HomeView
+export default PatientPortalView

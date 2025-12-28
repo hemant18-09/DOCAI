@@ -1,95 +1,88 @@
 import { useState, useEffect } from 'react'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import API_BASE from '../config/api'
 
 export default function LoginView({ goTo }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [userType, setUserType] = useState('patient')
+  const [loginAs, setLoginAs] = useState('patient') // patient | doctor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [signupNotice, setSignupNotice] = useState('')
 
-  // Show a one-time success banner if redirected from signup
+  // Show one-time signup success message
   useEffect(() => {
     const flag = localStorage.getItem('signupSuccess')
     const emailPrefill = localStorage.getItem('signupEmail')
+
     if (flag) {
       setSignupNotice('Successfully signed up! Please log in to continue.')
-      if (emailPrefill) {
-        setEmail(emailPrefill)
-      }
-      // Clear one-time flags
+      if (emailPrefill) setEmail(emailPrefill)
       localStorage.removeItem('signupSuccess')
       localStorage.removeItem('signupEmail')
     }
   }, [])
 
-  const handleFirebaseLogin = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
-    
-    // Guard: Firebase not configured
+    setError('')
+    setLoading(true)
+
     if (!auth) {
-      setError('Firebase is not configured. Check environment variables.')
+      setError('Firebase is not configured.')
+      setLoading(false)
       return
     }
-    
-    setLoading(true)
-    setError('')
-    
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      
-      // Get ID token
-      const idToken = await userCredential.user.getIdToken()
-      
-      // Send token to backend
-      const response = await fetch(`${API_BASE}/auth/login/firebase`, {
+      // 1️⃣ Firebase authentication
+      const cred = await signInWithEmailAndPassword(auth, email, password)
+      const idToken = await cred.user.getIdToken()
+
+      // 2️⃣ Ask backend who this user really is
+      const res = await fetch(`${API_BASE}/auth/login/firebase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        }
+          Authorization: `Bearer ${idToken}`,
+        },
       })
 
-      const data = await response.json()
+      const data = await res.json()
 
-      if (response.ok && data.success) {
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user))
-        localStorage.setItem('firebaseUid', data.firebaseUid)
-
-        // Decide navigation strictly by backend role, not the radio button.
-        // If the account isn't a doctor but the user selected Doctor, show a clear error.
-        const role = data.userType || 'user'
-        localStorage.setItem('userType', role)
-
-        setLoading(false)
-
-        if (role === 'doctor') {
-          goTo('provider-portal')
-        } else if (role === 'patient') {
-          if (userType === 'doctor') {
-            setError('This email belongs to a patient account. Please sign up as a doctor to access Provider Portal.')
-            return
-          }
-          goTo('home')
-        } else {
-          // No profile found in Firestore (role === 'user').
-          if (userType === 'doctor') {
-            setError('No doctor profile found for this email. Sign up as a doctor first.')
-            return
-          }
-          goTo('home')
-        }
-      } else {
-        setLoading(false)
-        setError(data.detail || 'Login failed')
+      if (!res.ok || !data.success) {
+        throw new Error(data.detail || 'Login failed')
       }
-    } catch (error) {
-      console.error('Firebase auth error:', error)
-      setError(error.message || 'Authentication failed')
+
+      const backendRole = data.userType // doctor | patient
+
+      // 3️⃣ HARD BLOCK role mismatch
+      if (backendRole !== loginAs) {
+        await signOut(auth)
+        setError(
+          `This account is registered as ${backendRole}. Please login as ${backendRole}.`
+        )
+        setLoading(false)
+        return
+      }
+
+      // 4️⃣ Save session
+      localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('firebaseUid', data.firebaseUid)
+      localStorage.setItem('userType', backendRole)
+
+      setLoading(false)
+
+      // 5️⃣ FINAL REDIRECT (this is the important part)
+      if (backendRole === 'doctor') {
+        goTo('provider-portal') // ✅ Doctor Portal ONLY
+      } else {
+        goTo('home') // ✅ Patient Portal ONLY
+      }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Authentication failed')
       setLoading(false)
     }
   }
@@ -101,97 +94,89 @@ export default function LoginView({ goTo }) {
         <p className="login-subtitle">Sign in to your DocAI account</p>
 
         {signupNotice && (
-          <div style={{
-            marginTop: '10px',
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#eafaf1',
-            color: '#1e8449',
-            borderRadius: '8px',
-            fontSize: '14px'
-          }}>
+          <div
+            style={{
+              background: '#eafaf1',
+              color: '#1e8449',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+            }}
+          >
             {signupNotice}
           </div>
         )}
-        
+
+        {/* Login As */}
         <div className="user-type-section">
-          <p className="user-type-label">I am a:</p>
-          <div className="user-type-options" style={{ display: 'flex', gap: '16px' }}>
-            <label className="user-type-option" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, padding: '12px', border: userType === 'patient' ? '2px solid var(--primary-teal)' : '2px solid #ccc', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: userType === 'patient' ? '#f0fdfb' : 'transparent' }}>
+          <p className="user-type-label">Login as:</p>
+          <div className="user-type-options">
+            <label className="user-type-option">
               <input
                 type="radio"
-                name="userType"
-                value="patient"
-                checked={userType === 'patient'}
-                onChange={(e) => { console.log('Changed to:', e.target.value); setUserType('patient'); }}
-                style={{ cursor: 'pointer', width: '18px', height: '18px', accentColor: 'var(--primary-teal)' }}
+                checked={loginAs === 'patient'}
+                onChange={() => setLoginAs('patient')}
               />
-              <span className="user-type-text" style={{ fontWeight: userType === 'patient' ? '600' : '400' }}>Patient</span>
+              Patient
             </label>
-            <label className="user-type-option" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1, padding: '12px', border: userType === 'doctor' ? '2px solid var(--primary-teal)' : '2px solid #ccc', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: userType === 'doctor' ? '#f0fdfb' : 'transparent' }}>
+
+            <label className="user-type-option">
               <input
                 type="radio"
-                name="userType"
-                value="doctor"
-                checked={userType === 'doctor'}
-                onChange={(e) => { console.log('Changed to:', e.target.value); setUserType('doctor'); }}
-                style={{ cursor: 'pointer', width: '18px', height: '18px', accentColor: 'var(--primary-teal)' }}
+                checked={loginAs === 'doctor'}
+                onChange={() => setLoginAs('doctor')}
               />
-              <span className="user-type-text" style={{ fontWeight: userType === 'doctor' ? '600' : '400' }}>Doctor</span>
+              Doctor
             </label>
           </div>
         </div>
-        
-        <form onSubmit={handleFirebaseLogin}>
+
+        <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label>Email</label>
             <input
-              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label>Password</label>
             <input
-              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
               required
             />
           </div>
 
           <button type="submit" disabled={loading} className="login-button">
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
           {error && (
-            <div className="error-message" style={{
-              color: '#e74c3c',
-              backgroundColor: '#fadbd8',
-              padding: '10px',
-              borderRadius: '8px',
-              marginTop: '10px',
-              textAlign: 'center'
-            }}>
+            <div
+              style={{
+                marginTop: '12px',
+                background: '#fadbd8',
+                color: '#c0392b',
+                padding: '10px',
+                borderRadius: '8px',
+                textAlign: 'center',
+              }}
+            >
               {error}
             </div>
           )}
         </form>
 
         <div className="login-footer">
-          <p>
-            Don't have an account?{' '}
-            <a onClick={() => { goTo('signup'); }} className="signup-link">
-              Sign up
-            </a>
-          </p>
+          Don’t have an account?{' '}
+          <span onClick={() => goTo('signup')} className="signup-link">
+            Sign up
+          </span>
         </div>
       </div>
     </div>

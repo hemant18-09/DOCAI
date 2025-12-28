@@ -501,7 +501,7 @@ const PatientDetail = ({ onBack }) => (
 );
 
 // Main Provider Portal View
-export default function ProviderPortalView() {
+export default function DoctorPortalView() {
   const [currentView, setCurrentView] = useState('dashboard');
 
   const getHeaderTitle = () => {
