@@ -25,67 +25,56 @@ export default function LoginView({ goTo }) {
   }, [])
 
   const handleLogin = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  e.preventDefault()
+  setError('')
+  setLoading(true)
 
-    if (!auth) {
-      setError('Firebase is not configured.')
-      setLoading(false)
-      return
+  try {
+    // 1️⃣ Firebase login
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    )
+
+    // 2️⃣ FORCE fresh token
+    const idToken = await cred.user.getIdToken(true)
+
+    // 3️⃣ Backend login
+    const res = await fetch(`${API_BASE}/auth/login/firebase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Login failed')
     }
 
-    try {
-      // 1️⃣ Firebase authentication
-      const cred = await signInWithEmailAndPassword(auth, email, password)
-      const idToken = await cred.user.getIdToken()
+    // 4️⃣ Save session
+    localStorage.setItem('user', JSON.stringify(data.user))
+    localStorage.setItem('userType', data.userType)
+    localStorage.setItem('firebaseUid', data.firebaseUid)
 
-      // 2️⃣ Ask backend who this user really is
-      const res = await fetch(`${API_BASE}/auth/login/firebase`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-      })
-
-      const data = await res.json()
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.detail || 'Login failed')
-      }
-
-      const backendRole = data.userType // doctor | patient
-
-      // 3️⃣ HARD BLOCK role mismatch
-      if (backendRole !== loginAs) {
-        await signOut(auth)
-        setError(
-          `This account is registered as ${backendRole}. Please login as ${backendRole}.`
-        )
-        setLoading(false)
-        return
-      }
-
-      // 4️⃣ Save session
-      localStorage.setItem('user', JSON.stringify(data.user))
-      localStorage.setItem('firebaseUid', data.firebaseUid)
-      localStorage.setItem('userType', backendRole)
-
-      setLoading(false)
-
-      // 5️⃣ FINAL REDIRECT (this is the important part)
-      if (backendRole === 'doctor') {
-        goTo('provider-portal') // ✅ Doctor Portal ONLY
-      } else {
-        goTo('home') // ✅ Patient Portal ONLY
-      }
-    } catch (err) {
-      console.error(err)
-      setError(err.message || 'Authentication failed')
-      setLoading(false)
+    // 5️⃣ Redirect
+    if (data.userType === 'doctor') {
+      goTo('doctor-portal')
+    } else {
+      goTo('patient-portal')
     }
+
+  } catch (err) {
+    console.error(err)
+    setError(err.message || 'Login failed')
+  } finally {
+    setLoading(false)
   }
+}
+
 
   return (
     <div className="login-container">

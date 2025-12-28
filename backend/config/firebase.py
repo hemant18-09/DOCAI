@@ -1,33 +1,43 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+import json
 from pathlib import Path
 
-# Initialize Firebase
+# Firebase state
 firebase_connected = False
 db = None
 
 try:
-    # Prefer env var path; fallback to bundled file
-    env_creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    bundled_path = Path(__file__).parent.parent / "config" / "serviceAccountKey.json"
-
     cred = None
-    if env_creds_path and Path(env_creds_path).exists():
-        cred = credentials.Certificate(env_creds_path)
-    elif bundled_path.exists():
-        cred = credentials.Certificate(str(bundled_path))
 
-    if cred:
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        firebase_connected = True
-        print("✓ Firebase Firestore connected successfully")
-    else:
-        print("⚠ Firebase credentials file not found, using in-memory storage")
-        firebase_connected = False
+    # 1️⃣ BEST: Render / Production (ENV JSON)
+    firebase_json = os.getenv("FIREBASE_ADMIN_JSON")
+    if firebase_json:
+        cred_dict = json.loads(firebase_json)
+        cred = credentials.Certificate(cred_dict)
+        print("✓ Using FIREBASE_ADMIN_JSON for Firebase Admin")
+
+    # 2️⃣ Local dev fallback (optional)
+    if not cred:
+        bundled_path = Path(__file__).parent.parent / "config" / "serviceAccountKey.json"
+        if bundled_path.exists():
+            cred = credentials.Certificate(str(bundled_path))
+            print("✓ Using local serviceAccountKey.json")
+
+    # 3️⃣ Initialize Firebase Admin
+    if not cred:
+        raise RuntimeError("Firebase Admin credentials not found")
+
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+
+    db = firestore.client()
+    firebase_connected = True
+    print("✓ Firebase Firestore connected successfully")
+
 except Exception as e:
-    print(f"⚠ Firebase initialization failed: {str(e)}")
-    print("  Falling back to in-memory storage")
+    print("⚠ Firebase initialization failed")
+    print(str(e))
     firebase_connected = False
+    db = None

@@ -5,16 +5,15 @@ import { MessageProvider } from './context/MessageContext'
 import './App.css'
 
 import LoginView from './views/LoginView.jsx'
+import SignupView from './views/SignupView.jsx'
 import PatientPortalView from './views/PatientPortalView.jsx'
 import TriageView from './views/TriageView.jsx'
 import SlotsView from './views/SlotsView.jsx'
 import RxUploadView from './views/PrescriptionUploadView.jsx'
 import RxAnalysisView from './views/RxAnalysisView.jsx'
 import MedsView from './views/MedsView.jsx'
-import DoctorView from './views/DoctorView.jsx'
 import StoresView from './views/StoresView.jsx'
 import RecordsView from './views/RecordsView.jsx'
-import SignupView from './views/SignupView.jsx'
 import ChatView from './views/ChatView.jsx'
 import DoctorPortalView from './views/DoctorPortalView.jsx'
 
@@ -23,10 +22,12 @@ import PatientProfile from './components/PatientProfile.jsx'
 // Firebase configured?
 const isFirebaseConfigured = !!auth
 
-function ViewSection({ id, name, currentView, children }) {
-  const className =
-    'view-section' + (currentView === name ? ' active-view' : '')
-  return <section id={id} className={className}>{children}</section>
+function ViewSection({ name, currentView, children }) {
+  return (
+    <section className={`view-section ${currentView === name ? 'active-view' : ''}`}>
+      {children}
+    </section>
+  )
 }
 
 function App() {
@@ -36,32 +37,34 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
-  /* Intro animation */
+  /* ---------------- INTRO ANIMATION ---------------- */
   useEffect(() => {
     if (!showIntro) return
     const timings = [800, 1200, 1000, 1000]
-    const timeoutId = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (animationStep < timings.length) {
         setAnimationStep(animationStep + 1)
       } else {
         setShowIntro(false)
       }
     }, timings[animationStep])
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timer)
   }, [animationStep, showIntro])
 
-  /* Bootstrap auth */
+  /* ---------------- AUTH BOOTSTRAP ---------------- */
   useEffect(() => {
     if (!auth) return
 
-    const existing = localStorage.getItem('user')
-    if (existing) {
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
       setIsLoggedIn(true)
+      setView('patient-portal')
       return
     }
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) return
+
       try {
         const idToken = await user.getIdToken()
         const res = await fetch(`${API_BASE}/auth/login/firebase`, {
@@ -72,11 +75,13 @@ function App() {
           },
         })
         const data = await res.json()
+
         if (res.ok && data.success) {
           localStorage.setItem('user', JSON.stringify(data.user))
           localStorage.setItem('userType', data.userType)
           localStorage.setItem('firebaseUid', data.firebaseUid)
           setIsLoggedIn(true)
+          setView('patient-portal')
         }
       } catch (e) {
         console.warn('Bootstrap login failed', e)
@@ -91,13 +96,15 @@ function App() {
     setView(name)
   }
 
-  /* PROFILE ICON CLICK */
+  /* ---------------- PROFILE ICON ---------------- */
   const handleAvatarClick = () => {
-    const role = localStorage.getItem('userType')
-    if (isLoggedIn && role === 'patient') {
-      setShowProfile(true)
-    }
-  }
+  const user = localStorage.getItem('user')
+  if (!user) return
+
+  setShowProfile(true)
+}
+
+  const hideChrome = ['login', 'signup'].includes(view)
 
   return (
     <>
@@ -110,7 +117,7 @@ function App() {
       {isFirebaseConfigured && (
         <MessageProvider>
 
-          {/* INTRO */}
+          {/* ---------------- INTRO ---------------- */}
           {showIntro && (
             <div className={`intro-screen ${animationStep >= 3 ? 'fade-out' : ''}`}>
               <div className="intro-content">
@@ -125,28 +132,34 @@ function App() {
             </div>
           )}
 
-          {/* HEADER (not for doctor portal) */}
-          {view !== 'doctor' && view !== 'doctor-portal' && (
+          {/* ---------------- HEADER ---------------- */}
+          {!hideChrome && view !== 'doctor-portal' && (
             <header className="header">
               <div className="header-logo-section">
                 <div className="logo">
                   <img src="/docai-logo.svg" alt="DocAI" className="logo-image" />
                   <span className="logo-text-animated">DocAI</span>
                 </div>
+
                 <button className="profile-icon-btn" onClick={handleAvatarClick}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
                   </svg>
                 </button>
               </div>
             </header>
           )}
 
-          {/* PATIENT PROFILE MODAL */}
-          {showProfile && <PatientProfile onClose={() => setShowProfile(false)} />}
+          {/* ---------------- PROFILE MODAL ---------------- */}
+          {showProfile && (
+            <PatientProfile
+              onClose={() => setShowProfile(false)}
+              goTo={goTo}
+            />
+          )}
 
-          {/* MAIN CONTENT */}
+          {/* ---------------- MAIN ---------------- */}
           {view === 'doctor-portal' ? (
             <DoctorPortalView />
           ) : (
@@ -154,6 +167,10 @@ function App() {
 
               <ViewSection name="login" currentView={view}>
                 <LoginView goTo={goTo} />
+              </ViewSection>
+
+              <ViewSection name="signup" currentView={view}>
+                <SignupView goTo={goTo} />
               </ViewSection>
 
               <ViewSection name="patient-portal" currentView={view}>
@@ -192,15 +209,11 @@ function App() {
                 <ChatView goTo={goTo} />
               </ViewSection>
 
-              <ViewSection name="signup" currentView={view}>
-                <SignupView goTo={goTo} />
-              </ViewSection>
-
             </main>
           )}
 
-          {/* MOBILE NAV (patient only) */}
-          {view !== 'doctor-portal' && (
+          {/* ---------------- MOBILE NAV ---------------- */}
+          {!hideChrome && view !== 'doctor-portal' && isLoggedIn && (
             <nav className="mobile-bottom-nav">
               <a onClick={() => goTo('patient-portal')}>Patient</a>
               <a onClick={() => goTo('meds')}>Meds</a>

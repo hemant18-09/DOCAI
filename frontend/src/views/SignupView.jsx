@@ -23,16 +23,10 @@ function SignupView({ goTo }) {
 
   const handleSignup = async (e) => {
     e.preventDefault()
-
-    if (!auth) {
-      setError('Firebase is not configured.')
-      return
-    }
-
     setError('')
     setLoading(true)
 
-    // Validations
+    // Basic validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       setLoading(false)
@@ -52,58 +46,44 @@ function SignupView({ goTo }) {
     }
 
     try {
-      // 1️⃣ Firebase signup
-      const userCredential = await createUserWithEmailAndPassword(
+      // 1️⃣ Firebase signup (SOURCE OF TRUTH)
+      const cred = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       )
 
-      const firebaseUid = userCredential.user.uid
+      const firebaseUid = cred.user.uid
 
-      // 2️⃣ Backend payload
-      const userData = {
-        id: firebaseUid,
-        name: formData.name,
-        email: formData.email,
-        role: userType,
-        phone: ''
+      // 2️⃣ Try backend save (NON-BLOCKING)
+      try {
+        await fetch(`${API_BASE}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: firebaseUid,
+            name: formData.name,
+            email: formData.email,
+            role: userType,
+            bloodGroup: formData.bloodGroup,
+            age: formData.age ? parseInt(formData.age) : null,
+            specialization: formData.specialization || null,
+          }),
+        })
+      } catch (backendErr) {
+        console.warn('Backend signup failed (ignored):', backendErr)
       }
 
-      if (userType === 'patient') {
-        userData.bloodGroup = formData.bloodGroup
-        userData.age = parseInt(formData.age)
-      } else {
-        userData.specialization =
-          formData.specialization || 'General Physician'
-      }
+      // 3️⃣ Force logout so login is required
+      await signOut(auth)
 
-      // 3️⃣ Save to backend
-      const response = await fetch(`${API_BASE}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      })
-
-      await response.json() // we don't depend on success flag
-
-      // ✅ SUCCESS → FORCE LOGOUT + REDIRECT
-      if (response.ok) {
-        try {
-          await signOut(auth)
-        } catch {}
-
-        alert('Successfully signed up. Please login to continue.')
-        goTo('login')
-        return
-      }
-
-      setError('Signup failed')
-      setLoading(false)
-
+      // 4️⃣ SUCCESS UX (ALWAYS RUNS)
+      alert('Successfully signed up. Please login to continue.')
+      goTo('login')
     } catch (err) {
       console.error('Signup error:', err)
       setError(err.message || 'Signup failed')
+    } finally {
       setLoading(false)
     }
   }
@@ -139,12 +119,26 @@ function SignupView({ goTo }) {
       )}
 
       <form onSubmit={handleSignup}>
-        <input name="name" placeholder="Full Name" onChange={handleChange} required />
+        <input
+          name="name"
+          placeholder="Full Name"
+          onChange={handleChange}
+          required
+        />
 
         {userType === 'patient' && (
           <>
-            <input name="bloodGroup" placeholder="Blood Group" onChange={handleChange} />
-            <input name="age" type="number" placeholder="Age" onChange={handleChange} />
+            <input
+              name="bloodGroup"
+              placeholder="Blood Group"
+              onChange={handleChange}
+            />
+            <input
+              name="age"
+              type="number"
+              placeholder="Age"
+              onChange={handleChange}
+            />
           </>
         )}
 
@@ -156,9 +150,27 @@ function SignupView({ goTo }) {
           />
         )}
 
-        <input name="email" type="email" placeholder="Email" onChange={handleChange} required />
-        <input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-        <input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm Password"
+          onChange={handleChange}
+          required
+        />
 
         <button type="submit" disabled={loading}>
           {loading ? 'Creating Account...' : 'Sign Up'}
