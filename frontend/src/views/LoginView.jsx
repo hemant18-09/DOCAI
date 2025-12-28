@@ -49,8 +49,8 @@ export default function LoginView({ goTo }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
+          'Authorization': `Bearer ${idToken}`
+        }
       })
 
       const data = await response.json()

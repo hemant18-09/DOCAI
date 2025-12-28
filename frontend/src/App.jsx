@@ -83,8 +83,10 @@ function App() {
           console.log('[App Bootstrap] Calling backend /api/auth/login/firebase')
           const response = await fetch(`${API_BASE}/auth/login/firebase`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken })
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            }
           })
           const data = await response.json()
           console.log('[App Bootstrap] Backend response:', data)

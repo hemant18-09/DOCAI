@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
+from typing import Optional
 from database.users import find_user_by_email, find_all_doctors, find_all_patients, create_user
 
 # Optional Firebase Auth
@@ -33,9 +34,6 @@ class UserResponse(BaseModel):
     phone: str
     role: str
     specialization: str = None
-
-class FirebaseLoginRequest(BaseModel):
-    idToken: str
 
 @router.post("/signup")
 async def signup(request: SignupRequest):
@@ -93,16 +91,18 @@ async def login(request: LoginRequest):
     )
 
 @router.post("/login/firebase")
-async def login_with_firebase(request: FirebaseLoginRequest):
-    """Login using Firebase ID token. Returns matched user profile by email if available."""
-    if not request.idToken:
-        raise HTTPException(status_code=400, detail="idToken is required")
+async def login_with_firebase(authorization: Optional[str] = Header(None)):
+    """Login using Firebase ID token from Authorization header. Returns matched user profile by email if available."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
     if not firebase_auth:
         raise HTTPException(status_code=503, detail="Firebase Auth not available")
 
+    token = authorization.split("Bearer ")[1]
+
     try:
-        decoded = firebase_auth.verify_id_token(request.idToken)
+        decoded = firebase_auth.verify_id_token(token)
         email = decoded.get("email")
         uid = decoded.get("uid")
         name = decoded.get("name") or ""
