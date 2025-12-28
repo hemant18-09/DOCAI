@@ -183,38 +183,29 @@ function App() {
               />
               <span className="logo-text-animated">DocAI</span>
             </div>
-            <nav className="desktop-nav">
-              <a className={desktopNavClass('home')} onClick={() => goTo('home')}>
-                Start Here
-              </a>
-              <a className={desktopNavClass('meds')} onClick={() => goTo('meds')}>
-                Medication
-              </a>
-              <a className={desktopNavClass('stores')} onClick={() => goTo('stores')}>
-                Availability
-              </a>
-              <a className={desktopNavClass('records')} onClick={() => goTo('records')}>
-                Records
-              </a>
-              <a className={desktopNavClass('chat')} onClick={() => goTo('chat')}>
-                Messages
-              </a>
-              <a
-                className={desktopNavClass('provider-portal')}
-                onClick={() => goTo('provider-portal')}
-              >
-                Provider Portal
-              </a>
-            </nav>
-            <div 
-              className="avatar" 
+            <button
+              className="profile-icon-btn"
               title={isLoggedIn ? "Profile Settings" : "Sign Up"}
               onClick={handleAvatarClick}
-              style={{ cursor: 'pointer' }}
-            ></div>
+              aria-label="Profile"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </button>
           </div>
         </header>
-      )}
+      )
 
       {view === 'doctor' ? (
           <DoctorView goTo={goTo} />
