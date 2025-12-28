@@ -7,37 +7,39 @@ from pathlib import Path
 
 load_dotenv()
 
-# Ensure the shared database package is importable
-# Add the repository root to PYTHONPATH so imports like `import database.*` work
+# Ensure repository root is importable
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
-# Initialize Firebase Admin (if credentials are available)
+# Initialize Firebase Admin (optional)
 try:
-    from config import firebase  # noqa: F401 - import triggers initialization
-except Exception:
-    # Continue without Firebase; modules will fallback to in-memory
-    pass
+    from config import firebase  # triggers initialization
+except Exception as e:
+    print("Firebase init skipped:", e)
 
 app = FastAPI()
 
-# CORS middleware
+# ✅ FINAL CORS CONFIG (DEV + PROD SAFE)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://docai1.vercel.app"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://docai1.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Import routes
+# Routes
 from routes.auth import router as auth_router
 from routes.messages import router as messages_router
 from routes.symptoms import router as symptoms_router
 from routes.signals import router as signals_router
 
-# Register routes
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 app.include_router(symptoms_router, prefix="/api/health", tags=["health"])
