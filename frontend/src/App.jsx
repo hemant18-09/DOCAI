@@ -205,7 +205,7 @@ function App() {
             </button>
           </div>
         </header>
-      )
+      )}
 
       {view === 'doctor' ? (
           <DoctorView goTo={goTo} />
