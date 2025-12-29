@@ -5,5 +5,7 @@ export function normalize(text) {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
+    .replace(/(chest)(pain)/g, "chest pain") // 🔥 KEY LINE
+    .replace(/(heart)(attack)/g, "heart attack")
     .trim();
 }

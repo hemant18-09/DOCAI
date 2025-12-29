@@ -7,6 +7,10 @@ import './App.css'
 import LoginView from './views/LoginView.jsx'
 import SignupView from './views/SignupView.jsx'
 import PatientPortalView from './views/PatientPortalView.jsx'
+import EmergencyBookingView from './views/EmergencyBookingView.jsx'
+import EmergencyHospitalsView from './views/EmergencyHospitalsView.jsx'
+import EmergencyConfirmView from './views/EmergencyConfirmView.jsx'
+
 import TriageView from './views/TriageView.jsx'
 import SlotsView from './views/SlotsView.jsx'
 import RxUploadView from './views/PrescriptionUploadView.jsx'
@@ -173,9 +177,23 @@ function App() {
                 <SignupView goTo={goTo} />
               </ViewSection>
 
-              <ViewSection name="patient-portal" currentView={view}>
+                      <ViewSection name="patient-portal" currentView={view}>
                 <PatientPortalView goTo={goTo} />
               </ViewSection>
+
+             <ViewSection name="emergency-booking" currentView={view}>
+  <EmergencyBookingView goTo={goTo} />
+</ViewSection>
+
+<ViewSection name="emergency-hospitals" currentView={view}>
+  <EmergencyHospitalsView goTo={goTo} />
+</ViewSection>
+
+<ViewSection name="emergency-confirm" currentView={view}>
+  <EmergencyConfirmView goTo={goTo} />
+</ViewSection>
+
+
 
               <ViewSection name="triage" currentView={view}>
                 <TriageView goTo={goTo} />

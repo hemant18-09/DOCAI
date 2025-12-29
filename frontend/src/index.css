@@ -1362,4 +1362,30 @@ body {
   }
 }
 
+/* Emergency hospital action buttons */
+.emergency-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.emergency-btn {
+  flex: 1 1 120px;
+  min-width: 120px;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .emergency-actions {
+    flex-direction: column;
+  }
+
+  .emergency-btn {
+    width: 100%;
+  }
+}
 
